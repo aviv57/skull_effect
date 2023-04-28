@@ -158,8 +158,8 @@ void wait_for_event_loop(){
       https.setTimeout(20000);
         
       // Send HTTP GET request
-      int httpResponseCode = https.GET();
       lastTime = millis();
+      int httpResponseCode = https.GET();
       
       if (httpResponseCode>0) {
         Serial.print("HTTP Response code: ");
