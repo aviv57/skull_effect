@@ -1,6 +1,7 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClientSecureBearSSL.h>
+#include "WiFiManager.h"
 #include <WiFiClient.h>
 
 #define PIN_RED_1    4 // D2
@@ -23,6 +24,8 @@
 #define WHITE {255, 255, 255}
 #define BLACK {0, 0, 0}
 
+#define HOT_SPOT_NAME "SkullEffect WifiManager"
+
 int black[] = BLACK;
 int red[] = RED;
 int yellow[] = YELLOW;
@@ -38,8 +41,6 @@ int current_color[3] = BLACK;
 byte should_run_effect = 0;
 
 // should be replaced
-const char* ssid     = "SSID";
-const char* password = "PASSWORD";
 const String wait_for_event_url = "URL";
 
 // Current time
@@ -47,7 +48,7 @@ unsigned long currentTime = millis();
 // Previous time
 unsigned long lastTime = 0; 
 
-unsigned long timerDelay = 15000;
+unsigned long timerDelay = 15000; // minimum delay between two calls to the api while not receivng events
 
 // Define a function to set the color of the RGB LED
 void setColor(int color[3]) {
@@ -110,6 +111,13 @@ void skull_eyes_effect_loop_bing_gpt() {
    fadeColor(blue, magenta, FADE_TIME_MS);
    fadeColor(magenta, white, FADE_TIME_MS);
    fadeColor(white, black, FADE_TIME_MS);   
+
+   for (int i=0; i<5; i+=1){
+    fadeColor(black, red, FADE_TIME_MS/2);
+    fadeColor(red, green, FADE_TIME_MS/2);
+    fadeColor(green, blue, FADE_TIME_MS/2);
+    fadeColor(blue, black, FADE_TIME_MS/2);
+   }
 }
 
 void pause(unsigned long pause_time) {
@@ -117,24 +125,41 @@ void pause(unsigned long pause_time) {
   delay(pause_time);
 }
 
+void configModeCallback (WiFiManager *myWiFiManager) {
+  Serial.println("Entered config mode");
+  Serial.println(WiFi.softAPIP());
+  //if you used auto generated SSID, print it
+  Serial.println(myWiFiManager->getConfigPortalSSID());
+}
+
 void setup() {
+  Serial.begin(115200);
   pinMode(PIN_RED_1,   OUTPUT);
   pinMode(PIN_RED_1,   OUTPUT);
   pinMode(PIN_GREEN_1, OUTPUT);
   pinMode(PIN_GREEN_2, OUTPUT);
   pinMode(PIN_BLUE_1,  OUTPUT);  
   pinMode(PIN_BLUE_2,  OUTPUT);
-  Serial.begin(115200);
   skull_eyes_effect_loop_bing_gpt();
 
-  // Connect to Wi-Fi network with SSID and password
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-  WiFi.begin(ssid, password);
+  WiFiManager wifiManager;    
+  wifiManager.setAPCallback(configModeCallback);
+
+  if(!wifiManager.autoConnect(HOT_SPOT_NAME)) {
+    Serial.println("failed to connect and hit timeout");
+    //reset and try again, or maybe put it to deep sleep
+    ESP.reset();
+    delay(1000);
+  } 
+ 
+  //if you get here you have connected to the WiFi
+  Serial.println(F("WIFIManager connected!"));  
+
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
+
   // Print local IP address and start web server
   Serial.println("");
   Serial.println("WiFi connected.");
